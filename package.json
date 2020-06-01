@@ -1,0 +1,12 @@
+{
+  "dependencies": {
+    "csv-parser": "^2.3.2",
+    "csv-writer": "^1.6.0",
+    "jest": "^26.0.1",
+    "jest-cli": "^26.0.1",
+    "uuid": "^8.1.0"
+  },
+  "scripts": {
+    "test": "jest"
+  }
+}
