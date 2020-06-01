@@ -2,7 +2,7 @@
 creating a coffee-chats algorithm and ui
 
 ## Files' navigation:
-- JS file (containing all logic) is read_write/write.js
+- read_write/write.js contains all js logic used
 - index.html contains the UI
 - package.json and yarn.lock contain all npm dependencies used
 - csv files in /read_write are used for testing purposes
