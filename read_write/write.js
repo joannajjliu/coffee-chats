@@ -178,7 +178,8 @@ function createPairs(prevData) {
     
     prevData[0].MatchQueue = matchQueueArray.toString();//reassign back to person object
     
-    newData.unshift(prevData[0], matchPerson[0]);//add to beg. of array, thereby switching order each week
+    newData.push(prevData[0]);//add current first person to end of array
+    newData.unshift(matchPerson[0]);//add matched person to beg. of array, thereby switching order each week
     
     prevData.shift();//remove person from persons array
   }
