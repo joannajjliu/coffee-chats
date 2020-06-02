@@ -60,18 +60,18 @@ fs.createReadStream('read_write/new.csv')
   .on('end', () => {
     console.log('CSV file successfully processed');
     
-    const person = {
-      Name: 'Bella',
-      Surname: 'Bon'
-    }
+    // const person = {
+    //   Name: 'Bella',
+    //   Surname: 'Bon'
+    // }
     // addPerson(person, prevData)
 
-    createPairs(prevData); //callback
+    // createPairs(prevData); //callback
   });
 
 // Add person to existing queue:
 //  this person will be added to the end of all queues, and have his own queue filled with prev. people
-function addPerson(person, prevData) {
+module.exports = function addPerson(person, prevData) {
   console.log("addPerson prevData: ", prevData);
   const newId = prevData.length + 1; //assign Id to new person
   
@@ -215,4 +215,5 @@ const pairsCsvWriter = createCsvWriter({
   ]
 });
 
+// exporting functions
 
