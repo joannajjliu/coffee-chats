@@ -1,7 +1,7 @@
 const express = require("express");
 const https = require("https");
 const bodyParser = require("body-parser");
-const addPerson = require('./read_write/write');
+const {addPerson, readCSV, createPairs} = require('./read_write/write');
 
 const app = express();
 app.use(bodyParser.urlencoded({extended: true}));
@@ -24,20 +24,16 @@ app.post("/", (req, res) => {
         Name: fName,
         Surname: lName
     }
-    const prevData = [
-        {
-        Id: 1,
-        Name: 'John',
-        Surname: 'Snow',
-        MatchQueue: '2,3,4,5'
-        }, {
-        Id: 2,
-        Name:'Clair',
-        Surname: 'White',
-        MatchQueue: '1,3,4,5'
-        }
-    ]
-    addPerson(person, prevData);
+    readCSV(person, addPerson);
+    res.redirect("/");
+});
+
+app.post("/pairs", async (req, res, next) => {
+    const person = '';
+
+    await readCSV(person, createPairs);
+    next();
+    
     res.redirect("/");
 });
 
