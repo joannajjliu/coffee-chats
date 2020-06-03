@@ -1,7 +1,9 @@
+const stringify = require('csv-stringify');
 // write data:
 const createCsvWriter = require('csv-writer').createObjectCsvWriter;
 // read data:
 const csv = require('csv-parser');
+const parse = require('csv-parse');
 const fs = require('fs');
 
 module.exports = {
@@ -9,15 +11,19 @@ module.exports = {
   readCSV: 
     function readCSV(person, callback) {
       const prevData = [];
-      fs.createReadStream(`read_write/new.csv`)
-      .pipe(csv())
+
+      // use original.csv to reset (for testing purposes, never overwrite "original.csv" file)
+      // keep at new.csv for testing ("new.csv" is overwritten during testing)
+      fs.createReadStream('read_write/original.csv')
+      .pipe(parse({ delimiter: ',' }))
       .on('data', (row) => {
-        prevData.push(row);
+        prevData.push(row);        
       })
       .on('end', () => {
+        prevData.shift(); //remove headers
         console.log('CSV file successfully processed');
         callback(person, prevData);
-      });
+      })
     },
 
 // Add person to existing queue:
@@ -27,49 +33,44 @@ module.exports = {
         const newId = prevData.length + 1; //assign Id to new person
         //add new person ID to MatchQueues of all prev persons:
         prevData.map(person => {
-          const matchQueueArray = person.MatchQueue.split(",");
+          const matchQueueArray = person[3].split(",");
           matchQueueArray.push(newId);
-          person.MatchQueue = matchQueueArray.toString();//reassign back to person object
+          person[3] = matchQueueArray.toString();//reassign back to person object
         })
 
         // add new person to persons object (i.e. prevData)
         const newMatchQueue = createUnmatchedIds(prevData);
-        const newPerson = {
-          Id: newId.toString(),
-          Name: person.Name,
-          Surname: person.Surname,
-          MatchQueue: newMatchQueue.toString()
-        };
+
+        const newPerson = [
+          newId.toString(),
+          person.Name,
+          person.Surname,
+          newMatchQueue.toString()
+        ];
         prevData.push(newPerson);
         
         // write to csv file
-        const addPersonWriter = createCsvWriter({
-          path: 'read_write/addPerson.csv',
-          header: [
-              {id: 'Id', title: 'Id'},
-              {id: 'Name', title: 'Name'},
-              {id: 'Surname', title: 'Surname'},
-              {id: 'MatchQueue', title: 'MatchQueue'}
-            ]
+        stringify(prevData, { header: true, columns: updatedCols }, (err, output) => {
+          if (err) throw err;
+          fs.writeFile('read_write/new.csv', output, (err) => {
+            if (err) throw err;
+            console.log('added person to new.csv.');
+          });
         });
-
-        addPersonWriter
-        .writeRecords(prevData)
-        .then(() => {
-          console.log('The person was successfully added to PREV csv file')
-        });
-      },
+    },
 
   createPairs: 
     function createPairs(undefined, prevData) {
       const pairs = [];
       let newData = [];
+      // console.log("createPairs prevData:", prevData);
       while (prevData.length !== 0) {
         if (prevData.length === 1) {//for odd number of people
           newData.unshift(prevData[0]); //add last person to first position of people array
           break;
         }
-        const matchQueueArray = prevData[0].MatchQueue.split(",");
+
+        const matchQueueArray = prevData[0][3].split(",");
         
         // hold Ids of unmatched persons: 
         const unmatchedIds = createUnmatchedIds(prevData);
@@ -84,22 +85,21 @@ module.exports = {
         };
 
         matchPerson = prevData.filter(person => {//find matched person
-          return person.Id == matchId;
+          return person[0] == matchId;
         });
         
-        matchPerson[0] = matchPerson[0] ? removeFromMatchQueue(matchPerson[0], prevData[0].Id) : null;
+        // console.log("matchPerson: ", matchPerson[0]);
+        matchPerson[0] = matchPerson[0] ? removeFromMatchQueue(matchPerson[0], prevData[0][0]) : null;
         
         prevData = prevData.filter(person => {//remove matched person
-          return person.Id != matchId;
+          return person[0] != matchId;
         });
         
-        let pair = [prevData[0].Id, matchId[0]];
-        let pair_Controller = {
-          pairList: pair
-        };
-        pairs.push(pair_Controller);
+        let pair = [prevData[0][0], matchId[0]];
         
-        prevData[0].MatchQueue = matchQueueArray.toString();//reassign back to person object
+        pairs.push(pair);
+        
+        prevData[0][3] = matchQueueArray.toString();//reassign back to person object's matchQueue
         
         newData.push(prevData[0]);//add current first person to end of array
         newData.unshift(matchPerson[0]);//add matched person to beg. of array, thereby switching order each week
@@ -110,19 +110,30 @@ module.exports = {
       console.log("pairs: ", pairs); 
       console.log("prevData: ", prevData);
 
-      newCsvWriter
-      .writeRecords(newData)
-      .then(()=> console.log('The NEW CSV file was written successfully'));
-    
-      pairsCsvWriter
-      .writeRecords(pairs)
-      .then(()=> console.log('The pairs file was written successfully'));
-    }
+      // writing persons with updated queues to csv:
+      stringify(newData, { header: true, columns: updatedCols }, (err, output) => {
+        if (err) throw err;
+        fs.writeFile('read_write/new.csv', output, (err) => {
+          if (err) throw err;
+          console.log('new.csv saved.');
+        });
+      });
+
+      // writing pairs to csv
+      stringify(pairs, { header: true, columns: pairCols }, (err, output) => {
+        if (err) throw err;
+        fs.writeFile('read_write/pairs.csv', output, (err) => {
+          if (err) throw err;
+          console.log('newPairs.csv saved.');
+        });
+      });
+
+    } //end of function createPairs
 } //end of module.exports
 
 // Assign new queues (newData array) and pairs:
 function removeFromMatchQueue(person, removeID) {
-  let matchArray =  person.MatchQueue.split(",");
+  let matchArray = person[3].split(",");
 
   removeIndex = matchArray.findIndex(num => {
     return (
@@ -130,7 +141,7 @@ function removeFromMatchQueue(person, removeID) {
     )});
 
   matchArray.splice(removeIndex, 1);
-  person.MatchQueue = matchArray.toString()
+  person[3] = matchArray.toString() //reassign to person.matchQueue
   return person;
 }
 
@@ -138,27 +149,22 @@ function createUnmatchedIds(unmatchedPersons) {//parameter unmatchedPersons is a
      // hold Ids of unmatched persons: 
      const unmatchedIds = []
      unmatchedPersons.map(person => {
-       unmatchedIds.push(person.Id);
+       unmatchedIds.push(person[0]);
      })
      return unmatchedIds;
 }
 
 // write in new queues and pairs:
-const newCsvWriter = createCsvWriter({
-  path: 'read_write/new.csv',
-  header: [
-    {id: 'Id', title: 'Id'},
-    {id: 'Name', title: 'Name'},
-    {id: 'Surname', title: 'Surname'},
-    {id: 'MatchQueue', title: 'MatchQueue'}
-  ]
-});
 
-const pairsCsvWriter = createCsvWriter({
-  path: 'read_write/pairs.csv',
-  header: [
-    {id: 'pairList', title: 'pairList'}
-  ]
-});
+const updatedCols = {
+  Id: 'Id',
+  Name: 'Name',
+  Surname: 'Surname',
+  MatchQueue: 'MatchQueue'
+};
 
+const pairCols = {
+  item1: 'item1',
+  item2: 'item2'
+};
 // exporting functions

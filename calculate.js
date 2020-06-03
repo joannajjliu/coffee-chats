@@ -17,6 +17,10 @@ app.get("/", (req, res) => {
     console.log(`fName: ${fName}, lName: ${lName}`);
 });
 
+app.get("/pairs", (req, res) => {
+    res.sendFile(__dirname + "/pairs.html"); //display content in index.html
+});
+
 app.post("/", (req, res) => {
     fName = req.body.fName;
     lName = req.body.lName;
@@ -28,12 +32,9 @@ app.post("/", (req, res) => {
     res.redirect("/");
 });
 
-app.post("/pairs", async (req, res, next) => {
+app.post("/pairs", (req, res) => {
     const person = '';
-
-    await readCSV(person, createPairs);
-    next();
-    
+    readCSV(person, createPairs);
     res.redirect("/");
 });
 
