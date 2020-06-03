@@ -1,7 +1,7 @@
 # coffee-chats
 creating a coffee-chats algorithm and ui
 
-![screenshot of coffee-chats app](/coffee-chats-screenshot.png)
+![screenshot of coffee-chats app](/coffee-chats-screenshot.PNG)
 
 ## How to use:
 - in this project's root folder, run "nodemon calculate.js". Then navigate to localhost:5000 to use the application.
