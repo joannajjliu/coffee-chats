@@ -1,6 +1,7 @@
 # coffee-chats
 creating a coffee-chats algorithm and ui
 
+## Screenshot of app:
 ![screenshot of coffee-chats app](/coffee-chats-screenshot.PNG)
 
 ## How to use:
