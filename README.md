@@ -1,6 +1,21 @@
 # coffee-chats
 creating a coffee-chats algorithm and ui
 
+## How to use:
+- in this project's root folder, run "nodemon calculate.js". Then navigate to localhost:5000, to see application
+- Add person:
+    - Type name, and surname, then click "submit":
+    - Check new.csv for added person
+- Calculate pairs:
+    - Click "Calculate Pairs":
+    - Check new.csv for updated persons' ordering and unmatched queues
+    - Check pairs.csv for new pairings
+- Replace original.csv with new.csv in readCSV function on the following line, to see app performance (i.e. new pairings) for consecutive weeks:
+```
+ fs.createReadStream('read_write/original.csv')
+```
+
+
 ## Files' navigation:
 - read_write/write.js contains all js logic used
 - index.html contains the UI
