@@ -5,7 +5,7 @@ const {addPerson, readCSV, createPairs} = require('./read_write/write');
 
 const app = express();
 app.use(bodyParser.urlencoded({extended: true}));
-app.use(express.static("public"));
+app.use(express.static("public")); //serve resources from public folder
 app.set("view engine", "ejs");
 
 //declaring global variables:
@@ -18,7 +18,7 @@ app.get("/", (req, res) => {
 });
 
 app.get("/pairs", (req, res) => {
-    res.sendFile(__dirname + "/pairs.html"); //display content in index.html
+    res.sendFile(__dirname + "/pairs.html"); //display content in pairs.html
 });
 
 app.post("/", (req, res) => {

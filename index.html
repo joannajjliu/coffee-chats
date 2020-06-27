@@ -4,6 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Hello Coffee Chats</title>
+    <!-- jQuery CDN import -->
+    <script src="https://code.jquery.com/jquery-3.5.1.min.js" integrity="sha256-9/aliU8dGd2tb6OSsuzixeV4y/faTqgFtohetphbbj0=" crossorigin="anonymous"></script>
+    <!-- PapaParse CDN import -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.2.0/papaparse.min.js"></script>
 </head>
 <body>
     <h1>Hello Coffee Chats</h1>
@@ -22,10 +26,79 @@
 
     <h4>Calculate Pairs</h4>
     <form action="/pairs" method="POST">
-        <button type="submit">
+        <button id="calculatePairs" type="submit">
             Calculate Pairs
         </button>
     </form>
+
+    <h4>Current Pairs</h4>
+    <button type="button" id="getPairs">
+        Show Pairs
+    </button>
+    <div id="pairs_data"></div>
+
+    <h4>Current participants</h4>
+    <button type="button" id="getParticipants">
+        Show Participants
+    </button>
+    <div id="participants_data"></div>
+    
+    <script>
+        //getPairs
+        $(document).ready(() => {
+            //getParticipants
+            $('#getParticipants').click(() => {
+                $.ajax({
+                    url: "./original_02.csv",
+                    dataType: "text",
+                    success: (data) => {
+                        const pairs_data = data.split(/\r?\n|\r/); //separate data by newlines
+                        let table_data = '<table class="table table-bordered table-striped">';
+                        for (let count = 0; count < pairs_data.length; count++) {
+                            const cell_data = pairs_data[count].split(",");
+                            table_data += '<tr>';
+                            for (let cell_count = 0; cell_count < cell_data.length; cell_count++) {
+                                if (count === 0) {//table headers
+                                    table_data += '<th>' + cell_data[cell_count] + '</th>';
+                                } else {
+                                    table_data += '<td>' + cell_data[cell_count] + '</td>';
+                                }
+                            }
+                            table_data += '</tr>';
+                        }
+                        table_data += '</table>';
+                        $('#participants_data').html(table_data);
+                    }
+                })
+            });
+            //getPairs
+            $('#getPairs').click(() => {
+                $.ajax({
+                    url: "./pairs_02.csv",
+                    dataType: "text",
+                    success: (data) => {
+                        const pairs_data = data.split(/\r?\n|\r/); //separate data by newlines
+                        let table_data = '<table class="table table-bordered table-striped">';
+                        for (let count = 0; count < pairs_data.length; count++) {
+                            const cell_data = pairs_data[count].split(",");
+                            table_data += '<tr>';
+                            for (let cell_count = 0; cell_count < cell_data.length; cell_count++) {
+                                if (count === 0) {//table headers
+                                    table_data += '<th>' + cell_data[cell_count] + '</th>';
+                                } else {
+                                    table_data += '<td>' + cell_data[cell_count] + '</td>';
+                                }
+                            }
+                            table_data += '</tr>';
+                        }
+                        table_data += '</table>';
+                        $('#pairs_data').html(table_data);
+                    }
+                })
+            });
+        });
+        
+    </script>
 
 </body>
 </html>

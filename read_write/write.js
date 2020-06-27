@@ -9,9 +9,8 @@ const fs = require('fs');
 module.exports = {
 //order of read files during test: original(to bring back to default) > addPerson > new (for remainder)
   readCSV: 
-    function readCSV(person, callback) {
+    function readCSV(person, nextAction) {
       const prevData = [];
-
       // use original.csv to reset (for testing purposes, never overwrite "original.csv" file)
       // keep at new.csv for testing ("new.csv" is overwritten during testing)
       fs.createReadStream('read_write/original.csv')
@@ -22,7 +21,7 @@ module.exports = {
       .on('end', () => {
         prevData.shift(); //remove headers
         console.log('CSV file successfully processed');
-        callback(person, prevData);
+        nextAction(person, prevData);
       })
     },
 
@@ -109,7 +108,7 @@ module.exports = {
       console.log("newData: ", newData);
       console.log("pairs: ", pairs); 
       console.log("prevData: ", prevData);
-
+      
       // writing persons with updated queues to csv:
       stringify(newData, { header: true, columns: updatedCols }, (err, output) => {
         if (err) throw err;
@@ -127,7 +126,6 @@ module.exports = {
           console.log('newPairs.csv saved.');
         });
       });
-
     } //end of function createPairs
 } //end of module.exports
 
