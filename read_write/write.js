@@ -7,9 +7,14 @@ const parse = require('csv-parse');
 const fs = require('fs');
 
 module.exports = {
+  //place person on-hold, stopping them from further matches
+  placeOnHold:
+    function placeOnHold(personID) {
+      //TBC
+    },
 //order of read files during test: original(to bring back to default) > addPerson > new (for remainder)
   readCSV: 
-    function readCSV(person, nextAction) {
+    function readCSV(person, nextAction, peopleOnHold) {
       const prevData = [];
       // use original.csv to reset (for testing purposes, never overwrite "original.csv" file)
       // keep at new.csv for testing ("new.csv" is overwritten during testing)
@@ -21,12 +26,12 @@ module.exports = {
       .on('end', () => {
         prevData.shift(); //remove headers
         console.log('CSV file successfully processed');
-        nextAction(person, prevData);
+        nextAction(person, prevData, peopleOnHold);
       })
     },
 
 // Add person to existing queue:
-//  this person will be added to the end of all queues, and have his own queue filled with prev. people
+// this person will be added to the end of all queues, and have his own queue filled with prev. people
   addPerson: 
     function addPerson(person, prevData) {
         const newId = prevData.length + 1; //assign Id to new person
@@ -58,18 +63,17 @@ module.exports = {
         });
     },
 
-  createPairs: 
-    function createPairs(undefined, prevData) {
+  createPairs:
+    function createPairs(undefined, prevData, peopleOnHold) {
       const pairs = [];
       let newData = [];
-      // console.log("createPairs prevData:", prevData);
       while (prevData.length !== 0) {
         if (prevData.length === 1) {//for odd number of people
           newData.unshift(prevData[0]); //add last person to first position of people array
           break;
         }
 
-        const matchQueueArray = prevData[0][3].split(",");
+        const matchQueueArray = prevData[0][3].split(","); //matchQueue from top [index = 0] of prevData
         
         // hold Ids of unmatched persons: 
         const unmatchedIds = createUnmatchedIds(prevData);
@@ -83,26 +87,37 @@ module.exports = {
           }
         };
 
+        // having removed matchId from person's matchQueue,
+        //    reassign back to person object's matchQueue:
+        prevData[0][3] = matchQueueArray.toString();
+
+        // when no one matches with current person (i.e. first person in previous data array)
+        // if (matchId.length == 0) {
+          // matchId.push("no person");
+        // }
+
         matchPerson = prevData.filter(person => {//find matched person
           return person[0] == matchId;
         });
         
-        // console.log("matchPerson: ", matchPerson[0]);
+        // remove current person from matchedPerson's matchQueue array, and reassign
         matchPerson[0] = matchPerson[0] ? removeFromMatchQueue(matchPerson[0], prevData[0][0]) : null;
         
-        prevData = prevData.filter(person => {//remove matched person
+        prevData = prevData.filter(person => {//remove matched person from prevData
           return person[0] != matchId;
         });
         
-        let pair = [prevData[0][0], matchId[0]];
+        let pair = [prevData[0][0], matchId[0]]; //create pair
         
-        pairs.push(pair);
+        pairs.push(pair); //push to pairs array
         
-        prevData[0][3] = matchQueueArray.toString();//reassign back to person object's matchQueue
-        
+
         newData.push(prevData[0]);//add current first person to end of array
+
+        // if (matchPerson[0]) {//if matchPerson exists,
         newData.unshift(matchPerson[0]);//add matched person to beg. of array, thereby switching order each week
-        
+        // }
+
         prevData.shift();//remove person from persons array
       }
       console.log("newData: ", newData);
@@ -129,7 +144,11 @@ module.exports = {
     } //end of function createPairs
 } //end of module.exports
 
+// Helper functions:
+
 // Assign new queues (newData array) and pairs:
+//  Inputs: person array, and ID to be removed from person's matchQueue
+//  Output: new person array, with matchQueue modified
 function removeFromMatchQueue(person, removeID) {
   let matchArray = person[3].split(",");
 

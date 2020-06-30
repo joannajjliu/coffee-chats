@@ -28,13 +28,15 @@ app.post("/", (req, res) => {
         Name: fName,
         Surname: lName
     }
-    readCSV(person, addPerson);
+    const peopleOnHold = []
+    readCSV(person, addPerson, peopleOnHold);
     res.redirect("/");
 });
 
 app.post("/pairs", (req, res) => {
     const person = '';
-    readCSV(person, createPairs);
+    const peopleOnHold = []
+    readCSV(person, createPairs, peopleOnHold);
     res.redirect("/");
 });
 
