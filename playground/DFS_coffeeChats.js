@@ -1,44 +1,56 @@
 // press "ctrl + alt + n" in vscode to run
+/* naming conventions:
+      **no abbreviations**
+      **no plurals (ex. use list instead)**
+      **consistent verbs for similar functions**
+      **capitalize two-letter acronyms**
+
+      camelCase : functions & variables
+      UPPERCASE: global variables & constants (ex. PI)
+      PascalCase: new Constructor function, classes
+      _underscorePrivateMethod: private methods
+
+      Not followed: (lower_case_underscored: variables)
+*/
 
 //imports:
 const stringify = require('csv-stringify');
-// write data:
-const createCsvWriter = require('csv-writer').createObjectCsvWriter;
 // read data:
-const csv = require('csv-parser');
 const parse = require('csv-parse');
 const fs = require('fs');
-const { match } = require('assert');
 
 // run createPairs
 // readCSV('', createPairs, '');
 
 readCSV('', createPairs, '');
 
-function readCSV(person, nextAction, peopleOnHold) {
-    const prevData = [];
+async function readCSV(person, callback, peopleOnHold) {
+    const previousPeopleData = [];
     // use original.csv to reset (for testing purposes, never overwrite "original.csv" file)
     // keep at new.csv for testing ("new.csv" is overwritten during testing)
+
     fs.createReadStream('read_write/new.csv') //change the file names to "test[].csv", to check it passes some previously failed tests
     .pipe(parse({ delimiter: ',' }))
     .on('data', (row) => {
-        prevData.push(row);        
+      previousPeopleData.push(row);        
     })
     .on('end', () => {
-        prevData.shift(); //remove headers
-        console.log('CSV file successfully processed');
-        nextAction(person, prevData, peopleOnHold);
+        previousPeopleData.shift(); //remove headers
+        console.log('CSV file successfully processed', previousPeopleData);
+        callback(person, previousPeopleData, peopleOnHold);
     })
 }
 
-function createPairs(undefined, prevData, peopleOnHold) {
-  let optimalPairs = [];
-  findOptimalPairs('', prevData, '').then(result => {
-    optimalPairs = result;
-    const newData = updatePeopleData(prevData, optimalPairs);
+function createPairs(person = null, prevData, peopleOnHold = null) {
+  //create copy of prevData into peopleData:
+  const peopleData = [];
+  prevData.map(person => peopleData.push(person));
 
+  findOptimalPairs('',peopleData,'').then(pair => {
+    let optimalPairs = pair;
+    const newData = updatePeopleData(peopleData, optimalPairs);
     // writing persons with updated queues to csv:
-    stringify(newData, { header: true, columns: updatedCols }, (err, output) => {
+    stringify(newData, { header: true, columns: PERSON_COLUMNS }, (err, output) => {
       console.log("stringify newData: ", newData);
       if (err) throw err;
       fs.writeFile('read_write/new.csv', output, (err) => {
@@ -47,7 +59,7 @@ function createPairs(undefined, prevData, peopleOnHold) {
       });
     });
     // writing pairs to csv:
-    stringify(optimalPairs, { header: true, columns: pairCols }, (err, output) => {
+    stringify(optimalPairs, { header: true, columns: PAIR_COLUMNS }, (err, output) => {
       if (err) throw err;
       fs.writeFile('read_write/pairs.csv', output, (err) => {
         if (err) throw err;
@@ -57,72 +69,28 @@ function createPairs(undefined, prevData, peopleOnHold) {
   })
 }
 
-// updatePeopleData processes a previous array of Person data, 
-//    and updates their matchQueues based on new pairings from optimalPairs
-// input: arrayOf [Person], arrayOf [pair]
-// output: arrayOf [Person]
-function updatePeopleData(prevData, optimalPairs) {
-  let personsData = []
-  // populate personsData
-  prevData.map(person => personsData.push(person)); //create copy of personsData to avoid side-effects
-  
-  const pairsData = []
-  // populate pairsData
-  optimalPairs.map(pair => pairsData.push(pair)); //create copy of optimalPairs, to avoid side-effects
-  
-  let newPersonsData = []; //will be adding to, and returning this array
-  while (pairsData.length > 0) {
-    const currPair = pairsData.pop();
-    const memOneId = currPair[0];
-    const memTwoId = currPair[1];
-    const memOneIndex = personsData.findIndex(person => person[0] === memOneId);
-    const memTwoIndex = personsData.findIndex(person => person[0] === memTwoId);
-    let personOne = personsData[memOneIndex];
-    let personTwo = personsData[memTwoIndex];
-    const memOneMatchQueue = personOne[3].split(",");
-    const memTwoMatchQueue = personTwo[3].split(",");
-    const memOneNewMatchQueue = memOneMatchQueue.filter(id => id != memTwoId);
-    const memTwoNewMatchQueue = memTwoMatchQueue.filter(id => id != memOneId);
-    
-    //reassign matchQueues. Index at 3 is the matchQueue:
-    personOne[3] = memOneNewMatchQueue.toString();
-    personTwo[3] = memTwoNewMatchQueue.toString();
-
-    //insert into newPersonsData array
-    const currLength = newPersonsData.length;
-    const insertIndexOne = Math.floor(Math.random() * (currLength + 1)); //random int from 0 to currLength
-    const insertIndexTwo = Math.floor(Math.random() * (currLength + 1));
-    newPersonsData.splice(insertIndexOne, 0, personOne);
-    newPersonsData.splice(insertIndexTwo, 0, personTwo);
-  }
-  if (personsData.length > 0) {//insert last person when there's an odd number
-    const currLength = newPersonsData.length;
-    const insertIndex = Math.floor(Math.random() * (currLength + 1)); //random int from 0 to currLength
-    const lastPerson = personsData.pop();
-    newPersonsData.splice(insertIndex, 0, lastPerson);
-  }
-  return newPersonsData;
-}
-
-// Helper functions:
 async function findOptimalPairs(filler, prevData, filler2) {
   console.log("prevData: ", prevData);
-  const originalPeopleArray = prevData; //array of all people (remains unmodified)
+  // create copy of prevData into originalPeopleArray:
+  const originalPeopleArray = [];
+  prevData.map(person => originalPeopleArray.push(person));
 
-  const maxPairs = Math.floor(prevData.length / 2);
-  const stack = [];
+  const maxNumberOfPairs = Math.floor(originalPeopleArray.length / 2);
+  const pairStack = [];
 
   const matchedPeopleArray = []; //ids of matched people; is dynamic
   const nArray = []; //modifiable array of visited n indices, for easier retrieval
 
   let bestSoFar = []; //store array of pairs (best so far)
-  let n = 0; //person index in prevData
+  let n = 0; //person index in originalPeopleArray
   let m = 0; //MatchQueue index
 
   //iterate until optimal pairings are found, 
   //  or reached end of backtracking:
-    while (stack.length != maxPairs) {
-      console.log("stackSoFar: ", stack);
+    while (pairStack.length != maxNumberOfPairs) {
+      console.log("stackSoFar: ", pairStack);
+
+      //m is matchQueue index, of n person
 
       let currM = m; //m of current pair node
       let prevM = m; //m of prev pair node
@@ -136,10 +104,9 @@ async function findOptimalPairs(filler, prevData, filler2) {
       // When currM dosen't exist:
       while (currM === -1) {//currM dosen't exist, therefore apply operations to go up one node:
 
-        const recentPair = stack.pop(); //pop previous pair and store
+        const recentPair = pairStack.pop(); //pop previous pair and store
 
         // -- update prevM: --
-        const lastAccessedPairFirstPosition = recentPair[0];
         const lastAccessedMatchQueueVal = recentPair[1];
         // const prevN = nArray.pop();
         n = nArray.pop();
@@ -157,7 +124,7 @@ async function findOptimalPairs(filler, prevData, filler2) {
         console.log("new currM: ", currM);
 
         // check if we've reached end of all backtracks, return function if we have:
-        if (currM === -1 && stack.length === 0) {// reached end of function (no optimal result found):
+        if (currM === -1 && pairStack.length === 0) {// reached end of function (no optimal result found):
             return bestSoFar; //no optimal solution found, return bestSoFar
         }
       }// end of backtrack while loop
@@ -167,8 +134,8 @@ async function findOptimalPairs(filler, prevData, filler2) {
       console.log("currM after loop: ", currM);
       //when currM returns with a viable match, create pair from person at position n, and their matchQueue pair at currM:
       const newPair = createSinglePair(originalPeopleArray, n, currM);
-      stack.push(newPair);
-      console.log("stack after newPair pushed: ", stack);
+      pairStack.push(newPair);
+      console.log("pairStack after newPair pushed: ", pairStack);
 
       // -- add pair to matchedPeopleArray:--
       matchedPeopleArray.push(newPair[0]);
@@ -180,13 +147,60 @@ async function findOptimalPairs(filler, prevData, filler2) {
       n = findNextFeasibleNIndex(originalPeopleArray, n, matchedPeopleArray); //update n
       console.log("n so far: ",  n);
 
-      if (stack.length > bestSoFar.length) {//update bestSoFar pairs' array as we proceed
-        bestSoFar = stack;
+      if (pairStack.length > bestSoFar.length) {//update bestSoFar pairs' array as we proceed
+        bestSoFar = pairStack;
       }
     }// end of while loop; an optimal solution found
 
-    console.log(`stack:`, stack);
-    return stack;
+    console.log(`pairStack:`, pairStack);
+    return pairStack;
+}
+
+// updatePeopleData processes a previous array of Person data, 
+//    and updates their matchQueues based on new pairings from optimalPairs
+// input: arrayOf [Person], arrayOf [pair]
+// output: arrayOf [Person]
+function updatePeopleData(prevData, optimalPairs) {
+  //create copy of prevData into peopleData:
+  const peopleData = []
+  prevData.map(person => peopleData.push(person));
+  
+   //create copy of optimalPairs into pairsData
+  const pairsData = []
+  optimalPairs.map(pair => pairsData.push(pair));
+  
+  const newPeopleData = []; //will be adding to, and returning this array
+  while (pairsData.length > 0) {
+    const currPair = pairsData.pop();
+    const memberOneId = currPair[0];
+    const memberTwoId = currPair[1];
+    const memberOneIndex = peopleData.findIndex(person => person[0] === memberOneId);
+    const memberTwoIndex = peopleData.findIndex(person => person[0] === memberTwoId);
+    let personOne = peopleData[memberOneIndex];
+    let personTwo = peopleData[memberTwoIndex];
+    const memberOneMatchQueue = personOne[3].split(",");
+    const memberTwoMatchQueue = personTwo[3].split(",");
+    const memberOneNewMatchQueue = memberOneMatchQueue.filter(id => id != memberTwoId);
+    const memberTwoNewMatchQueue = memberTwoMatchQueue.filter(id => id != memberOneId);
+    
+    //reassign matchQueues. Index at 3 is the matchQueue:
+    personOne[3] = memberOneNewMatchQueue.toString();
+    personTwo[3] = memberTwoNewMatchQueue.toString();
+
+    //insert into newPeopleData array
+    const lengthSoFar = newPeopleData.length;
+    const insertIndexOne = Math.floor(Math.random() * (lengthSoFar + 1)); //random int from 0 to lengthSoFar
+    const insertIndexTwo = Math.floor(Math.random() * (lengthSoFar + 1));
+    newPeopleData.splice(insertIndexOne, 0, personOne);
+    newPeopleData.splice(insertIndexTwo, 0, personTwo);
+  }
+  if (peopleData.length > 0) {//insert last person when there's an odd number
+    const lengthSoFar = newPeopleData.length;
+    const insertIndex = Math.floor(Math.random() * (lengthSoFar + 1)); //random int from 0 to lengthSoFar
+    const lastPerson = peopleData.pop();
+    newPeopleData.splice(insertIndex, 0, lastPerson);
+  }
+  return newPeopleData;
 }
 
 // inputs: arrayOf [people], integer currN, arrayOf matchedPeopleIDs:
@@ -256,41 +270,25 @@ function createMatchQueue(personsArray, index) {
     return personsArray[index][3].split(","); 
 }
 
-// Assign new queues (newData array) and pairs:
-//  Inputs: person array, and ID to be removed from person's matchQueue
-//  Output: new person array, with matchQueue modified
-function removeFromMatchQueue(person, removeID) {
-    let matchArray = person[3].split(",");
-  
-    removeIndex = matchArray.findIndex(num => {
-      return (
-         num == parseInt(removeID)
-      )});
-  
-    matchArray.splice(removeIndex, 1);
-    person[3] = matchArray.toString() //reassign to person.matchQueue
-    return person;
-  }
-  
-  function createUnmatchedIds(unmatchedPersons) {//parameter unmatchedPersons is an array of person objects
-       // hold Ids of unmatched persons: 
-       const unmatchedIds = []
-       unmatchedPersons.map(person => {
-         unmatchedIds.push(person[0]);
-       })
-       return unmatchedIds;
-  }
+function createUnmatchedIds(unmatchedPersons) {//parameter unmatchedPersons is an array of person objects
+      // hold Ids of unmatched persons: 
+      const unmatchedIds = []
+      unmatchedPersons.map(person => {
+        unmatchedIds.push(person[0]);
+      })
+      return unmatchedIds;
+}
   
   // write in new queues and pairs:
   
-  const updatedCols = {
-    Id: 'Id',
-    Name: 'Name',
-    Surname: 'Surname',
-    MatchQueue: 'MatchQueue'
-  };
-  
-  const pairCols = {
-    item1: 'item1',
-    item2: 'item2'
-  };
+const PERSON_COLUMNS = {
+  Id: 'Id',
+  Name: 'Name',
+  Surname: 'Surname',
+  MatchQueue: 'MatchQueue'
+};
+
+const PAIR_COLUMNS = {
+  item1: 'item1',
+  item2: 'item2'
+};
