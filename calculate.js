@@ -8,12 +8,10 @@ app.use(bodyParser.urlencoded({extended: true}));
 app.use(express.static("public")); //serve resources from public folder
 app.set("view engine", "ejs");
 
-//declaring global variables:
-let fName = '';
-let lName = '';
-
 app.get("/", (req, res) => {
     res.sendFile(__dirname + "/index.html"); //display content in index.html
+    const fName = '';
+    const lName = '';
     console.log(`fName: ${fName}, lName: ${lName}`);
 });
 
@@ -22,8 +20,8 @@ app.get("/pairs", (req, res) => {
 });
 
 app.post("/", (req, res) => {
-    fName = req.body.fName;
-    lName = req.body.lName;
+    const fName = req.body.fName;
+    const lName = req.body.lName;
     const person = {
         Name: fName,
         Surname: lName
