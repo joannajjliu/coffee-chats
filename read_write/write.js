@@ -2,7 +2,6 @@ const stringify = require('csv-stringify');
 // write data:
 const createCsvWriter = require('csv-writer').createObjectCsvWriter;
 // read data:
-const csv = require('csv-parser');
 const parse = require('csv-parse');
 const fs = require('fs');
 
@@ -12,14 +11,15 @@ module.exports = {
     function placeOnHold(personID) {
       //TBC 
     },
-//order of read files during test: original(to bring back to default) > addPerson > new (for remainder)
+    
+  //order of read files during test: original(to bring back to default) > addPerson > new (for remainder)
   readCSV: 
     async function readCSV(person, callback, peopleOnHold) {
       const previousPeopleData = [];
       // use original.csv to reset (for testing purposes, never overwrite "original.csv" file)
       // keep at new.csv for testing ("new.csv" is overwritten during testing)
 
-      fs.createReadStream('read_write/original.csv') //change the file names to "test[].csv", to check it passes some previously failed tests
+      await fs.createReadStream('read_write/new.csv') //change the file names to "test[].csv", to check it passes some previously failed tests
       .pipe(parse({ delimiter: ',' }))
       .on('data', (row) => {
         previousPeopleData.push(row);        
@@ -216,14 +216,14 @@ function updatePeopleData(prevData, optimalPairs) {
   peopleData.map(person => peopleDataID.push(person[0]));
   newPeopleData.map(person => newPeopleDataID.push(person[0]));
 
-  const missingPersonID = peopleDataID.filter(id => newPeopleDataID.indexOf(id) === -1); //IDs of people not paired
+  const missingPeopleID = peopleDataID.filter(id => newPeopleDataID.indexOf(id) === -1); //IDs of people not paired
 
-  while (missingPersonID.length > 0) {//insert person when there's an odd number, or they weren't paired
+  while (missingPeopleID.length > 0) {//insert person when there's an odd number, or they weren't paired
     const lengthSoFar = newPeopleData.length;
     const insertIndex = Math.floor(Math.random() * (lengthSoFar + 1)); //random int from 0 to lengthSoFar
-    const lastIndex = missingPersonID.length - 1;
-    const nextPerson = peopleData.filter(person => person[0] == missingPersonID[lastIndex])[0];
-    missingPersonID.pop();
+    const lastIndex = missingPeopleID.length - 1;
+    const nextPerson = peopleData.filter(person => person[0] == missingPeopleID[lastIndex])[0];
+    missingPeopleID.pop();
     newPeopleData.splice(insertIndex, 0, nextPerson);
   }
   return newPeopleData;

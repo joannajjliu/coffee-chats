@@ -24,21 +24,23 @@ const fs = require('fs');
 
 readCSV('', createPairs, '');
 
-async function readCSV(person, callback, peopleOnHold) {
-    const previousPeopleData = [];
-    // use original.csv to reset (for testing purposes, never overwrite "original.csv" file)
-    // keep at new.csv for testing ("new.csv" is overwritten during testing)
+// readCSV('',() => {}, '');
 
-    fs.createReadStream('read_write/new.csv') //change the file names to "test[].csv", to check it passes some previously failed tests
-    .pipe(parse({ delimiter: ',' }))
-    .on('data', (row) => {
-      previousPeopleData.push(row);        
-    })
-    .on('end', () => {
-        previousPeopleData.shift(); //remove headers
-        console.log('CSV file successfully processed');
-        callback(person, previousPeopleData, peopleOnHold);
-    })
+async function readCSV(person, callback, peopleOnHold) {
+  const previousPeopleData = [];
+  // use original.csv to reset (for testing purposes, never overwrite "original.csv" file)
+  // keep at new.csv for testing ("new.csv" is overwritten during testing)
+
+  fs.createReadStream('read_write/new.csv') //change the file names to "test[].csv", to check it passes some previously failed tests
+  .pipe(parse({ delimiter: ',' }))
+  .on('data', (row) => {
+    previousPeopleData.push(row);        
+  })
+  .on('end', () => {
+      previousPeopleData.shift(); //remove headers
+      console.log('CSV file successfully processed');
+      callback(person, previousPeopleData, peopleOnHold);
+  })
 }
 
 function createPairs(person = null, prevData, peopleOnHold = null) {
@@ -186,14 +188,14 @@ function updatePeopleData(prevData, optimalPairs) {
   peopleData.map(person => peopleDataID.push(person[0]));
   newPeopleData.map(person => newPeopleDataID.push(person[0]));
 
-  const missingPersonID = peopleDataID.filter(id => newPeopleDataID.indexOf(id) === -1); //IDs of people not paired
+  const missingPeopleID = peopleDataID.filter(id => newPeopleDataID.indexOf(id) === -1); //IDs of people not paired
 
-  while (missingPersonID.length > 0) {//insert person when there's an odd number, or they weren't paired
+  while (missingPeopleID.length > 0) {//insert unpaired person(s)
     const lengthSoFar = newPeopleData.length;
     const insertIndex = Math.floor(Math.random() * (lengthSoFar + 1)); //random int from 0 to lengthSoFar
-    const lastIndex = missingPersonID.length - 1;
-    const nextPerson = peopleData.filter(person => person[0] == missingPersonID[lastIndex])[0];
-    missingPersonID.pop();
+    const lastIndex = missingPeopleID.length - 1;
+    const nextPerson = peopleData.filter(person => person[0] == missingPeopleID[lastIndex])[0];
+    missingPeopleID.pop();
     newPeopleData.splice(insertIndex, 0, nextPerson);
   }
   return newPeopleData;
