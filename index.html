@@ -20,7 +20,7 @@
         <label for="lName">Last name:</label><br>
         <input type="text" id="lName" name="lName" placeholder="Doe">
         <br><br>
-        <input type="submit" name="submit">
+        <input type="submit" name="addPersonSubmit" id="addPersonSubmit">
     </form>
     <br/><br/>
 
@@ -43,19 +43,61 @@
     </button>
     <div id="participants_data"></div>
     
+    <br/><br/>
+    <form action="/" method="post">
+        <h4>Put Person on Hold</h4>
+        <label for="personID">Person ID:</label><br>
+        <input type="text" id="personID" name="personID" placeholder="4">
+        <br><br>
+        <input type="submit" name="submit">
+    </form>
+
+    <h4>Current People On Hold</h4>
+    <button type="button" id="getPeopleOnHold">
+        Show People On Hold
+    </button>
+    <div id="onHold_data"></div>
+
     <script>
         //getPairs
         $(document).ready(() => {
-            //getParticipants
-            $('#getParticipants').click(() => {
+            //getPeopleOnHold
+            $('#getPeopleOnHold').click(() => {
                 $.ajax({
-                    url: "./original_02.csv",
+                    url: "./read_write/peopleOnHold.csv",
                     dataType: "text",
                     success: (data) => {
                         const pairs_data = data.split(/\r?\n|\r/); //separate data by newlines
                         let table_data = '<table class="table table-bordered table-striped">';
                         for (let count = 0; count < pairs_data.length; count++) {
-                            const cell_data = pairs_data[count].split(",");
+                            const cell_data = pairs_data[count].split(/(?:,)(?=(?:[^"]|"[^"]*")*$)/);//split by commas except in-btw quotes
+                            console.log("cell_data:", cell_data);
+                            table_data += '<tr>';
+                            for (let cell_count = 0; cell_count < cell_data.length; cell_count++) {
+                                if (count === 0) {//table headers
+                                    table_data += '<th>' + cell_data[cell_count] + '</th>';
+                                } else {
+                                    table_data += '<td>' + cell_data[cell_count] + '</td>';
+                                }
+                            }
+                            table_data += '</tr>';
+                        }
+                        table_data += '</table>';
+                        $('#onHold_data').html(table_data);
+                    }
+                })
+            });
+            //getParticipants
+            $('#getParticipants').click(() => {
+                $.ajax({
+                    url: "./read_write/new.csv",
+                    dataType: "text",
+                    success: (data) => {
+                        const pairs_data = data.split(/\r?\n|\r/); //separate data by newlines
+                        let table_data = '<table class="table table-bordered table-striped">';
+                        for (let count = 0; count < pairs_data.length; count++) {
+                            const cell_data = pairs_data[count].split(/(?:,)(?=(?:[^"]|"[^"]*")*$)/);//split by commas except in-btw quotes
+                            console.log("cell_data:", cell_data);
                             table_data += '<tr>';
                             for (let cell_count = 0; cell_count < cell_data.length; cell_count++) {
                                 if (count === 0) {//table headers
@@ -74,7 +116,7 @@
             //getPairs
             $('#getPairs').click(() => {
                 $.ajax({
-                    url: "./pairs_02.csv",
+                    url: "./read_write/pairs.csv",
                     dataType: "text",
                     success: (data) => {
                         const pairs_data = data.split(/\r?\n|\r/); //separate data by newlines

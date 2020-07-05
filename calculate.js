@@ -1,7 +1,7 @@
 const express = require("express");
 const https = require("https");
 const bodyParser = require("body-parser");
-const {addPerson, readCSV, createPairs} = require('./read_write/write');
+const {addPerson, addOnHoldPerson, readCSV, createPairs} = require('./write');
 
 const app = express();
 app.use(bodyParser.urlencoded({extended: true}));
@@ -10,9 +10,6 @@ app.set("view engine", "ejs");
 
 app.get("/", (req, res) => {
     res.sendFile(__dirname + "/index.html"); //display content in index.html
-    const fName = '';
-    const lName = '';
-    console.log(`fName: ${fName}, lName: ${lName}`);
 });
 
 app.get("/pairs", (req, res) => {
@@ -20,15 +17,26 @@ app.get("/pairs", (req, res) => {
 });
 
 app.post("/", (req, res) => {
-    const fName = req.body.fName;
-    const lName = req.body.lName;
-    const person = {
-        Name: fName,
-        Surname: lName
+    const fName = req.body.fName || undefined;
+    const lName = req.body.lName || undefined;
+    const onHoldID = req.body.personID || 0;
+    console.log("fName:", fName);
+    console.log("lName:", lName);
+    console.log("onHoldID:", onHoldID);
+    if (fName || lName) {
+        console.log("fName/lName values entered");
+        const person = {
+            Name: fName,
+            Surname: lName
+        }
+        readCSV(person, addPerson, 0);
+        res.redirect("/");
     }
-    const peopleOnHold = []
-    readCSV(person, addPerson, peopleOnHold);
-    res.redirect("/");
+    if (onHoldID) {
+        console.log("onHoldID value entered", onHoldID);
+        readCSV('', addOnHoldPerson, onHoldID);
+        res.redirect("/");
+    }
 });
 
 app.post("/pairs", (req, res) => {

@@ -1,5 +1,5 @@
 
-const { addPerson, readCSV, createPairs } = require('../read_write/write');
+const { addPerson, readCSV, createPairs } = require('../write');
 const { generateRandomString } = require('./generate_random_string');
 
 //this function doesn't yet work when variable peopleToAdd > 1 (probably to do with streams; need to look into it)

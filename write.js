@@ -6,30 +6,74 @@ const parse = require('csv-parse');
 const fs = require('fs');
 
 module.exports = {
-  //place person on-hold, stopping them from further matches
-  placeOnHold:
-    function placeOnHold(personID) {
-      //TBC 
-    },
     
   //order of read files during test: original(to bring back to default) > addPerson > new (for remainder)
   readCSV: 
-    async function readCSV(person, callback, peopleOnHold) {
+    async function readCSV(person, callback, onHoldID) {
       const previousPeopleData = [];
       // use original.csv to reset (for testing purposes, never overwrite "original.csv" file)
       // keep at new.csv for testing ("new.csv" is overwritten during testing)
+      const peopleOnHold = [];
+      fs.readFile('public/read_write/IDsOnHold.csv', 'utf8', (err, data) => {
+        peopleOnHold.push(data);
+        const onHoldIDs = peopleOnHold[0].split(",");
+        if (onHoldID != 0 && !onHoldIDs.includes(onHoldID.toString())) {//check is not 0, and does not already exist
+          onHoldIDs.push(onHoldID.toString());
+        }
+        console.log("onHoldIDs: ", onHoldIDs);
+    
+        //change the file names to "test[].csv", to check it passes some previously failed tests
+        const stream = fs.createReadStream('public/read_write/new.csv'); 
+        stream.pipe(parse({ delimiter: ',' }))
+        .on('data', (row) => {
+          previousPeopleData.push(row);        
+        })
+        .on('end', () => {
+            previousPeopleData.shift(); //remove headers
+            console.log('CSV file successfully processed', previousPeopleData);
+            callback(person, previousPeopleData, onHoldIDs);
+            stream.close();
+        })
+      });
+    },
 
-      const stream = fs.createReadStream('read_write/original.csv') //change the file names to "test[].csv", to check it passes some previously failed tests
-      stream.pipe(parse({ delimiter: ',' }))
-      .on('data', (row) => {
-        previousPeopleData.push(row);        
-      })
-      .on('end', () => {
-          previousPeopleData.shift(); //remove headers
-          console.log('CSV file successfully processed');
-          callback(person, previousPeopleData, peopleOnHold);
-          stream.close();
-      })
+  addOnHoldPerson:
+    function addOnHoldPerson(ignore, prevData, onHold) {
+      // create copy of onHold into onHoldIDs
+      const onHoldIDs = [];
+      onHold.map(id => onHoldIDs.push(id));
+
+      const onHoldPeople = [];
+
+      //create copy of prevData into peopleData:
+      let peopleData = [];
+      prevData.map(person => peopleData.push(person));
+
+      //filter out onHoldPeople from peopleData, add to onHoldPeople array:
+      onHoldIDs.map(id => {
+        peopleData = peopleData.filter(person => {
+          if (person[0] == id) {
+            onHoldPeople.push(person);
+            return false;
+          } else {
+            return true;
+          }
+        })
+      });
+
+      // write to csv files:
+      stringify(onHoldPeople, { header: true, columns: PERSON_COLUMNS }, (err, output) => {
+        if (err) throw err;
+        fs.writeFile(__dirname + '/public/read_write/peopleOnHold.csv', output, (err) => {
+          if (err) throw err;
+          console.log('added people data to peopleOnHold.csv.');
+        });
+      });
+
+      fs.writeFile('public/read_write/IDsOnHold.csv', onHoldIDs, (err) => {
+        if (err) throw err;
+        console.log('IDsOnHold.csv saved.');
+      });
     },
 
 // Add person to existing queue:
@@ -63,7 +107,7 @@ module.exports = {
       // write to csv file
       stringify(peopleData, { header: true, columns: PERSON_COLUMNS }, (err, output) => {
         if (err) throw err;
-        fs.writeFile('read_write/new.csv', output, (err) => {
+        fs.writeFile(__dirname + '/public/read_write/new.csv', output, (err) => {
           if (err) throw err;
           console.log('added person to new.csv.');
         });
@@ -71,19 +115,37 @@ module.exports = {
     },
 
   createPairs:
-    function createPairs(person = null, prevData, peopleOnHold = null) {
-      //create copy of prevData into peopleData:
-      const peopleData = [];
-      prevData.map(person => peopleData.push(person));
+    function createPairs(person = null, prevData, onHold) {
+      // create copy of onHold into onHoldIDs
+      const onHoldIDs = [];
+      onHold.map(id => onHoldIDs.push(id));
     
-      findOptimalPairs('',peopleData,'').then(pair => {
+      const onHoldPeople = [];
+      //create copy of prevData into peopleData:
+      let peopleData = [];
+      prevData.map(person => peopleData.push(person));
+      //filter out onHoldPeople from peopleData, add to onHoldPeople array:
+      onHoldIDs.map(id => {
+        peopleData = peopleData.filter(person => {
+          if (person[0] == id) {
+            onHoldPeople.push(person);
+            return false;
+          } else {
+            return true;
+          }
+        })
+      });
+      console.log("onHoldPeople:", onHoldPeople);
+      findOptimalPairs(onHoldPeople, peopleData,'').then(pair => {
         let optimalPairs = pair;
         const newData = updatePeopleData(peopleData, optimalPairs);
+        console.log("newData pre-push:", newData);
+        onHoldPeople.map(person => newData.push(person));
         // writing persons with updated queues to csv:
         stringify(newData, { header: true, columns: PERSON_COLUMNS }, (err, output) => {
           console.log("stringify newData: ", newData);
           if (err) throw err;
-          fs.writeFile('read_write/new.csv', output, (err) => {
+          fs.writeFile('public/read_write/new.csv', output, (err) => {
             if (err) throw err;
             console.log('new.csv saved.');
           });
@@ -91,7 +153,7 @@ module.exports = {
         // writing pairs to csv:
         stringify(optimalPairs, { header: true, columns: PAIR_COLUMNS }, (err, output) => {
           if (err) throw err;
-          fs.writeFile('read_write/pairs.csv', output, (err) => {
+          fs.writeFile('public/read_write/pairs.csv', output, (err) => {
             if (err) throw err;
             console.log('newPairs.csv saved.');
           });

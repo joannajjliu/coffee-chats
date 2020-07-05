@@ -1,4 +1,4 @@
-const parse = require('csv-parse');
+const parse = require('../public/read_write/csv-parse');
 const fs = require('fs');
 
 const data = []
