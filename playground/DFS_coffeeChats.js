@@ -18,39 +18,67 @@ const stringify = require('csv-stringify');
 // read data:
 const parse = require('csv-parse');
 const fs = require('fs');
+const { prependOnceListener } = require('process');
 
 // run createPairs
 // readCSV('', createPairs, '');
-
 readCSV('', createPairs, '');
-
 // readCSV('',() => {}, '');
 
-async function readCSV(person, callback, peopleOnHold) {
+async function readCSV(person, callback, onHold) {
   const previousPeopleData = [];
   // use original.csv to reset (for testing purposes, never overwrite "original.csv" file)
   // keep at new.csv for testing ("new.csv" is overwritten during testing)
+  const peopleOnHold = [];
+  fs.readFile('read_write/original_peopleOnHold.csv', 'utf8', (err, data) => {
+    peopleOnHold.push(data);
 
-  fs.createReadStream('read_write/new.csv') //change the file names to "test[].csv", to check it passes some previously failed tests
-  .pipe(parse({ delimiter: ',' }))
-  .on('data', (row) => {
-    previousPeopleData.push(row);        
-  })
-  .on('end', () => {
-      previousPeopleData.shift(); //remove headers
-      console.log('CSV file successfully processed');
-      callback(person, previousPeopleData, peopleOnHold);
-  })
+    //change the file names to "test[].csv", to check it passes some previously failed tests
+    const stream = fs.createReadStream('read_write/new.csv'); 
+    stream.pipe(parse({ delimiter: ',' }))
+    .on('data', (row) => {
+      previousPeopleData.push(row);        
+    })
+    .on('end', () => {
+        previousPeopleData.shift(); //remove headers
+        console.log("peopleOnHold", peopleOnHold);
+        console.log('CSV file successfully processed', previousPeopleData);
+        callback(person, previousPeopleData, peopleOnHold);
+        stream.close();
+    })
+  });
 }
 
-function createPairs(person = null, prevData, peopleOnHold = null) {
+function createPairs(person = null, prevData, onHold) {
+  // create copy of peopleOnHold into onHoldIDs
+  const onHoldIDs = onHold[0].split(",");
+  console.log("onHoldIDs: ", onHoldIDs);
+  const onHoldPeople = [];
+
   //create copy of prevData into peopleData:
-  const peopleData = [];
+  let peopleData = [];
   prevData.map(person => peopleData.push(person));
 
-  findOptimalPairs('',peopleData,'').then(pair => {
+  //filter out onHoldPeople from peopleData, add to onHoldPeople array:
+  onHoldIDs.map(id => {
+    peopleData = peopleData.filter(person => {
+      if (person[0] == id) {
+        onHoldPeople.push(person);
+        return false;
+      } else {
+        return true;
+      }
+    })
+  });
+
+  // console.log("peopleDataAfterFilter: ", peopleData);
+  console.log("onHoldPeople:", onHoldPeople);
+
+  findOptimalPairs(onHoldPeople, peopleData,'').then(pair => {
     let optimalPairs = pair;
     const newData = updatePeopleData(peopleData, optimalPairs);
+    console.log("newData pre-push:", newData);
+    onHoldPeople.map(person => newData.push(person));
     // writing persons with updated queues to csv:
     stringify(newData, { header: true, columns: PERSON_COLUMNS }, (err, output) => {
       console.log("stringify newData: ", newData);
@@ -71,7 +99,7 @@ function createPairs(person = null, prevData, peopleOnHold = null) {
   })
 }
 
-async function findOptimalPairs(filler, prevData, filler2) {
+async function findOptimalPairs(peopleOnHold, prevData, filler2) {
   console.log("prevData: ", prevData);
   // create copy of prevData into originalPeopleArray:
   let originalPeopleArray = [];
@@ -82,6 +110,7 @@ async function findOptimalPairs(filler, prevData, filler2) {
   const pairStack = [];
 
   const matchedPeopleArray = []; //ids of matched people; is dynamic
+  peopleOnHold.map(person => matchedPeopleArray.push(person[0]));
   const nArray = []; //modifiable array of visited n indices, for easier retrieval
 
   let bestSoFar = []; //store array of pairs (best so far)
@@ -123,9 +152,10 @@ async function findOptimalPairs(filler, prevData, filler2) {
       //when currM returns with a viable match, create pair from person at position n, and their matchQueue pair at currM:
       const newPair = createSinglePair(originalPeopleArray, n, currM);
       pairStack.push(newPair);
-      // -- add pair to matchedPeopleArray:--
+      // -- add pair to matchedPeopleArray of ids:--
       matchedPeopleArray.push(newPair[0]);
       matchedPeopleArray.push(newPair[1]);
+      console.log("matchedPeopleArray:", matchedPeopleArray);
 
       nArray.push(n); //add current n index to nArray; values in nArray should always be unique and increasing
 

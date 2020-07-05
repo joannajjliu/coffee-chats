@@ -19,8 +19,8 @@ module.exports = {
       // use original.csv to reset (for testing purposes, never overwrite "original.csv" file)
       // keep at new.csv for testing ("new.csv" is overwritten during testing)
 
-      await fs.createReadStream('read_write/new.csv') //change the file names to "test[].csv", to check it passes some previously failed tests
-      .pipe(parse({ delimiter: ',' }))
+      const stream = fs.createReadStream('read_write/original.csv') //change the file names to "test[].csv", to check it passes some previously failed tests
+      stream.pipe(parse({ delimiter: ',' }))
       .on('data', (row) => {
         previousPeopleData.push(row);        
       })
@@ -28,6 +28,7 @@ module.exports = {
           previousPeopleData.shift(); //remove headers
           console.log('CSV file successfully processed');
           callback(person, previousPeopleData, peopleOnHold);
+          stream.close();
       })
     },
 

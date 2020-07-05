@@ -9,8 +9,8 @@ const { generateRandomString } = require('./generate_random_string');
 
 readCSV('',addPeople,'',500);//change last parameter to desired number of additional people, added to csv file
 /*approximate add times using the below functions: 
-    +250 to 250: 3.341 secs
-    +500 to 500: 28.426 secs
+    +250 to already 250: 3.341 secs
+    +500 to already 500: 28.426 secs
 */
 
 async function readCSV(person, callback, peopleOnHold, numberPeople) {
